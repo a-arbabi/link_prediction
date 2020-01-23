@@ -22,6 +22,7 @@ def process_kb(links, entity2idx, rel2idx):
   return np.array(link_ids)
 
 def get_dataset(data_dir):
+
   folds = ['train', 'valid', 'test', 'induced_all']
   
   entity2idx = {}
