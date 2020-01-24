@@ -16,19 +16,19 @@ def process_kb(links, entity2idx, rel2idx):
     rel_idx = rel2idx[rel]
     obj_idx = entity2idx[obj]
     
-    #link_ids.append((sub_idx, rel_idx, obj_idx))
     link_ids.append((obj_idx, rel_idx, sub_idx))
     
   return np.array(link_ids)
 
-def get_dataset(data_dir):
+def create_datasets(data_dir):
 
-  folds = ['train', 'valid', 'test', 'induced_all']
+  folds = ['train', 'valid', 'test']
   
   entity2idx = {}
   rel2idx = {}
-  dataset = {}
+  datasets = {}
 
   for fold in folds:
-    file_adrs = data_root+'/'+dataset_name+'/'+fold+'.txt'
-    dataset[fold] = process_kb(open(file_adrs).readlines(), entity2idx, rel2idx)
+    file_adrs = data_dir + '/' + fold + '.txt'
+    datasets[fold] = process_kb(open(file_adrs).readlines(), entity2idx, rel2idx)
+  return datasets, entity2idx, rel2idx
