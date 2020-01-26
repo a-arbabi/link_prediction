@@ -24,7 +24,7 @@ def train_tucker(model, datasets, config):
   training_pairs = np.array(list(train_sub_rel_pair_to_objs.keys()))
 
   optimizer = tf.keras.optimizers.Adam(learning_rate=config.lr)
-  dataset_size = training_pairs.shape[0]
+  dataset_size = training_pairs.shape[0] # pylint: disable=E1136  # pylint/issues/3139
   for epoch in range(config.n_epochs):
     history = []
     np.random.shuffle(training_pairs)
