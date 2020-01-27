@@ -4,8 +4,14 @@ import tensorflow as tf
 import evaluation
 import data_utils
 
-def train_tucker(model, datasets, config):
+class exp_params:
+  use_ncr = False
+  model = 'tucker'
+  consider_hypernymy_as_relation = False
+  sum_decendents = False
+  loss_type = 'cross entropy softmax'
 
+def train_tucker(model, datasets, config):
   train_sub_rel_pair_to_objs = {}
   all_sub_rel_pair_to_objs = {}
   folds = ['train', 'valid', 'test']
@@ -57,7 +63,7 @@ def train_tucker(model, datasets, config):
     print("Epoch::", epoch, ", Loss::", np.mean(history))
     print(evaluation.evaluate(model, config, all_sub_rel_pair_to_objs, datasets['valid']))
 
-def run_exp(config, dataset_path):
+def run_exp(exp_params, config, dataset_path):
   datasets, entity2idx, rel2idx = data_utils.create_datasets(dataset_path)
 
   config.n_entities = len(entity2idx)
@@ -68,7 +74,7 @@ def run_exp(config, dataset_path):
     train_tucker(model, datasets, config)
 
 def main():
-  run_exp(tucker.config, '../hpo_dataset')
+  run_exp(exp_params, tucker.config, '../hpo_dataset')
 
 if __name__ == '__main__':
   main()
