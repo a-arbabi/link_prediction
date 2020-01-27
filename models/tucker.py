@@ -1,5 +1,21 @@
 import tensorflow as tf
 
+class config:
+  n_entities = 0
+  n_relations = 0
+  d_entity = 500
+  d_relation = 1
+  batch_size = 128
+  lr = 0.001
+  lr_decay = 1.0
+  hidden_d1 = 0.4
+  hidden_d2 = 0.4
+  input_d = 0.4
+  use_softmax = True
+  n_epochs =150
+  n_models = 1
+
+
 class TuckerModel(tf.keras.Model):
   def __init__(self, config):
     super(TuckerModel, self).__init__()

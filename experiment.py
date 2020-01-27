@@ -58,9 +58,17 @@ def train_tucker(model, datasets, config):
     print(evaluation.evaluate(model, config, all_sub_rel_pair_to_objs, datasets['valid']))
 
 def run_exp(config, dataset_path):
-  models = [tucker.TuckerModel(config) for i in range(config.n_models)]
   datasets, entity2idx, rel2idx = data_utils.create_datasets(dataset_path)
-  del entity2idx, rel2idx
 
+  config.n_entities = len(entity2idx)
+  config.n_relations = len(rel2idx)
+
+  models = [tucker.TuckerModel(config) for i in range(config.n_models)]
   for model in models:
     train_tucker(model, datasets, config)
+
+def main():
+  run_exp(tucker.config, '../hpo_dataset')
+
+if __name__ == '__main__':
+  main()
