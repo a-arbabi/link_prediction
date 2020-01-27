@@ -2,6 +2,7 @@ import models.tucker as tucker
 import numpy as np
 import tensorflow as tf
 import evaluation
+import data_utils
 
 def train_tucker(model, datasets, config):
 
@@ -56,7 +57,10 @@ def train_tucker(model, datasets, config):
     print("Epoch::", epoch, ", Loss::", np.mean(history))
     print(evaluation.evaluate(model, config, all_sub_rel_pair_to_objs, datasets['valid']))
 
-def run_exp(config, datasets):
+def run_exp(config, dataset_path):
   models = [tucker.TuckerModel(config) for i in range(config.n_models)]
+  datasets, entity2idx, rel2idx = data_utils.create_datasets(dataset_path)
+  del entity2idx, rel2idx
+
   for model in models:
     train_tucker(model, datasets, config)
