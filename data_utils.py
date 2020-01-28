@@ -126,6 +126,7 @@ def create_datasets(data_dir):
 
   for fold in folds:
     datasets[fold] = np.concatenate([datasets[fold], omim_induced[fold]])
+  datasets['train'] = np.concatenate([datasets['train'], hypernyms])
   datasets['train'] = np.concatenate([datasets['train'], is_a_induced])
 
   return datasets, entity2idx, rel2idx
