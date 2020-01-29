@@ -80,16 +80,19 @@ def create_aggregated_dataset(
       'sub': x['sub'],
       'rel': x['rel'],
       'obj_list': tf.scatter_nd(
-        tf.expand_dims(x['obj_list'], 1), tf.ones_like(x['obj_list']), [n_entities]),
+        tf.expand_dims(x['obj_list'], 1),
+        tf.ones_like(x['obj_list'], dtype=tf.float32),
+        [n_entities]),
     }
     if ground_truth_triplets is not None:
       output['gt_obj_list'] = tf.scatter_nd(
         tf.expand_dims(x['gt_obj_list'], 1),
-        tf.ones_like(x['gt_obj_list']),
+        tf.ones_like(x['gt_obj_list'], dtype=tf.float32),
         [n_entities])
     return output
 
-  dataset = dataset.cache().map(_make_dense)
+  dataset = dataset.map(_make_dense)
+  #dataset = dataset.cache().map(_make_dense)
 
   return dataset
 

@@ -53,7 +53,7 @@ def train_tucker(model, train_dataset, valid_dataset, config):
         labels[i, train_sub_rel_pair_to_objs[tuple(batch[i])]] = 1.0
       '''
 
-      labels = tf.cast(batch['obj_list'], dtype=tf.float32)
+      labels = batch['obj_list']
 
       with tf.GradientTape() as tape:
           logits = model(batch, training=True)
@@ -89,12 +89,12 @@ def run_exp(exp_params, config, dataset_path):
   train_dataset = data_utils.create_aggregated_dataset(
     triplets['train'], config.n_entities)
   train_dataset = (
-    train_dataset.filter(filter_fn).shuffle(500).batch(config.batch_size))
+    train_dataset.filter(filter_fn).shuffle(500).batch(config.batch_size)).cache()
 
   valid_dataset = data_utils.create_aggregated_dataset(
     triplets['valid'], config.n_entities, gt_triplets)
   valid_dataset = (
-    valid_dataset.filter(filter_fn).shuffle(500).batch(config.batch_size))
+    valid_dataset.filter(filter_fn).batch(config.batch_size))
 
   models = [tucker.TuckerModel(config) for i in range(config.n_models)]
   for model in models:
