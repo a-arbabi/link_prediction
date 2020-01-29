@@ -11,6 +11,26 @@ class exp_params:
   sum_decendents = False
   loss_type = 'cross entropy softmax'
 
+@tf.function
+def apply_batch(model, batch, config, optimizer):
+  labels = batch['obj_list']
+
+  with tf.GradientTape() as tape:
+      logits = model(batch, training=True)
+      n_hits = tf.reduce_sum(labels, axis=1, keepdims=True)
+      labels = labels/n_hits
+      if config.use_softmax:
+        loss = tf.reduce_mean(
+            n_hits*tf.nn.softmax_cross_entropy_with_logits(
+                labels = labels, logits = logits))
+      else:
+        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            labels = labels, logits = logits))
+
+  grads = tape.gradient(loss, model.trainable_variables)
+  optimizer.apply_gradients(zip(grads, model.trainable_variables))
+  return loss
+
 def train_tucker(model, train_dataset, valid_dataset, config):
   '''
   train_sub_rel_pair_to_objs = {}
@@ -52,29 +72,15 @@ def train_tucker(model, train_dataset, valid_dataset, config):
       for i in range(real_batch_size):
         labels[i, train_sub_rel_pair_to_objs[tuple(batch[i])]] = 1.0
       '''
+      loss = apply_batch(model, batch, config, optimizer)
 
-      labels = batch['obj_list']
-
-      with tf.GradientTape() as tape:
-          logits = model(batch, training=True)
-          #logits = model(batch, training=True) #
-          #labels = tf.convert_to_tensor(labels, dtype=tf.float32) #
-          n_hits = tf.reduce_sum(labels, axis=1, keepdims=True)
-          labels = labels/n_hits
-          if config.use_softmax:
-            loss = tf.reduce_mean(
-                n_hits*tf.nn.softmax_cross_entropy_with_logits(
-                    labels = labels, logits = logits))
-          else:
-            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                labels = labels, logits = logits))
-
-      grads = tape.gradient(loss, model.trainable_variables)
-      optimizer.apply_gradients(zip(grads, model.trainable_variables))
       history.append(loss.numpy())
 
     print("Epoch::", epoch, ", Loss::", np.mean(history))
-    print(evaluation.evaluate(model, config, valid_dataset))
+    valid_results = evaluation.evaluate(model, config, valid_dataset)
+    for cat in valid_results:
+      print(cat, valid_results[cat].numpy())
+    print('')
 
 def run_exp(exp_params, config, dataset_path):
   triplets, entity2idx, rel2idx = data_utils.create_datasets(dataset_path)
