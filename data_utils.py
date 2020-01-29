@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 import os
 
 
@@ -26,6 +27,71 @@ def process_kb(links, entity2idx, rel2idx, reverse=False):
       link_ids.append((sub_idx, rel_idx, obj_idx))
     
   return np.array(link_ids)
+
+def triplet_list_to_pair_dict(triplet_list, n_entities):
+  sub_rel_pairs = {}
+  for triplet in triplet_list:
+    pair = (triplet[0], triplet[1])
+    if pair not in sub_rel_pairs:
+      sub_rel_pairs[pair] = set()
+    sub_rel_pairs[pair].add(triplet[2])
+  return sub_rel_pairs
+
+def create_aggregated_dataset(
+  triplet_list, n_entities, ground_truth_triplets=None):
+  sub_rel_pairs = triplet_list_to_pair_dict(triplet_list, n_entities)
+
+  if ground_truth_triplets is not None:
+    gt_sub_rel_pairs = triplet_list_to_pair_dict(
+      ground_truth_triplets, n_entities)
+
+  def gen():
+    for pair in sub_rel_pairs:
+      data_dict = {
+        'sub':pair[0],
+        'rel':pair[1],
+        'obj_list':list(sub_rel_pairs[pair])
+        }
+      if ground_truth_triplets is not None:
+        data_dict['gt_obj_list'] = list(gt_sub_rel_pairs[pair])
+      yield data_dict
+
+  tensor_types = {
+    'sub': tf.int64,
+    'rel': tf.int64,
+    'obj_list': tf.int64,
+  }
+  tensor_shapes = {
+    'sub': tf.TensorShape([]),
+    'rel': tf.TensorShape([]),
+    'obj_list': tf.TensorShape([None]),
+  }
+  if ground_truth_triplets is not None:
+    tensor_types['gt_obj_list'] = tf.int64
+    tensor_shapes['gt_obj_list'] = tf.TensorShape([None])
+
+  dataset = tf.data.Dataset.from_generator(
+    gen,
+    tensor_types,
+    tensor_shapes
+  )
+  def _make_dense(x):
+    output = {
+      'sub': x['sub'],
+      'rel': x['rel'],
+      'obj_list': tf.scatter_nd(
+        tf.expand_dims(x['obj_list'], 1), tf.ones_like(x['obj_list']), [n_entities]),
+    }
+    if ground_truth_triplets is not None:
+      output['gt_obj_list'] = tf.scatter_nd(
+        tf.expand_dims(x['gt_obj_list'], 1),
+        tf.ones_like(x['gt_obj_list']),
+        [n_entities])
+    return output
+
+  dataset = dataset.cache().map(_make_dense)
+
+  return dataset
 
 def hpo_dfs(hp_idx, children, hp_descendants):
   if hp_idx in hp_descendants:
@@ -90,7 +156,6 @@ def create_datasets(data_dir):
 
   omim2hpo_induced = {}
   omim2hpo_induced_combined = {}
-  print(len(omim2hpo_direct['test']))
   for fold in folds:
     omim2hpo_induced[fold] = {}
     for omim in omim2hpo_direct[fold]:
@@ -103,7 +168,6 @@ def create_datasets(data_dir):
           if hp_anc not in omim2hpo_induced_combined[omim]:
             omim2hpo_induced_combined[omim].add(hp_anc)
             omim2hpo_induced[fold][omim].add(hp_anc)
-  print((omim2hpo_induced['test']))
 
   rel2idx['is_manifested_in_reversed_induced'] = len(rel2idx)
   rel2idx['is_a_induced'] = len(rel2idx)

@@ -1,5 +1,26 @@
 import numpy as np
+import tensorflow as tf
 
+def evaluate(model, config, dataset):
+  ranks = []
+  for batch in dataset:
+    logits = model(batch, training=False) 
+    probs = tf.nn.softmax(logits, axis=1)
+    negatives = 1.0 - tf.cast(batch['gt_obj_list'], tf.float32)
+    negative_probs = probs * negatives
+    indecies = tf.where(batch['obj_list'])
+    for row in indecies:
+      rank = tf.math.count_nonzero(probs[row[0], row[1]]<=negative_probs[row[0]])+1
+      ranks.append(int(rank))
+  ranks = np.array(ranks)
+  return {
+      'R@1': np.mean(ranks==1),
+      'R@3': np.mean(ranks<=3),
+      'R@10': np.mean(ranks<=10),
+      'MRR': np.mean(1.0/ranks)
+  }
+
+'''
 def evaluate(model, config, all_sub_rel_pair_to_objs, dataset):
   ranks = []
   dataset_size = dataset.shape[0]
@@ -11,6 +32,8 @@ def evaluate(model, config, all_sub_rel_pair_to_objs, dataset):
     labels = np.ones([real_batch_size, config.n_entities])
     for i in range(real_batch_size):
       pair = (batch[i,0], batch[i,1])
+      if pair[1]!=0:
+        continue
       labels[i, all_sub_rel_pair_to_objs[pair]] = 0.0
     
     logits = model(batch[:,:2], training=False).numpy()
@@ -28,3 +51,5 @@ def evaluate(model, config, all_sub_rel_pair_to_objs, dataset):
       'R@10': np.mean(ranks<=10),
       'MRR': np.mean(1.0/ranks)
   }
+
+'''

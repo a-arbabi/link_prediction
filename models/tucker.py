@@ -12,7 +12,8 @@ class config:
   hidden_d2 = 0.4
   input_d = 0.4
   use_softmax = True
-  n_epochs =150
+  n_epochs =30
+  #n_epochs =150
   n_models = 1
 
 
@@ -47,7 +48,7 @@ class TuckerModel(tf.keras.Model):
 
   def call(self, input, training=False):
     batch_sub_embedding = tf.nn.embedding_lookup(
-        self.entity_embeddings, input[:,0])
+        self.entity_embeddings, input['sub'])
     #batch_sub_embedding = tf.expand_dims(batch_sub_embedding, 1)
     batch_sub_embedding = self.input_dropout(
       batch_sub_embedding,
