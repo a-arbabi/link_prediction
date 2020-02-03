@@ -83,7 +83,8 @@ def train_tucker(model, train_dataset, valid_dataset, config):
     print('')
 
 def run_exp(exp_params, config, dataset_path):
-  triplets, entity2idx, rel2idx = data_utils.create_datasets(dataset_path)
+  triplets, entity2idx, rel2idx, sp_mat = data_utils.create_datasets(dataset_path)
+  del(sp_mat)
   gt_triplets = np.concatenate(
     [triplets[fold] for fold in ['train', 'valid', 'test']])
   config.n_entities = len(entity2idx)

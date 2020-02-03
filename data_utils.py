@@ -190,10 +190,13 @@ def create_datasets(data_dir):
     for hp_anc in hp_ancestors[hp_idx]:
       is_a_induced.append([hp_idx, rel2idx['is_a_induced'], hp_anc])
   is_a_induced = np.array(is_a_induced)
+  sparse_anc_matrix = tf.SparseTensor(
+    is_a_induced[:,[0,2]], np.ones(shape=[is_a_induced.shape[0]]), # pylint: disable=E1136  # pylint/issues/3139 
+    [len(entity2idx), len(entity2idx)])
 
   for fold in folds:
     datasets[fold] = np.concatenate([datasets[fold], omim_induced[fold]])
   datasets['train'] = np.concatenate([datasets['train'], hypernyms])
   datasets['train'] = np.concatenate([datasets['train'], is_a_induced])
 
-  return datasets, entity2idx, rel2idx
+  return datasets, entity2idx, rel2idx, sparse_anc_matrix
