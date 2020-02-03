@@ -92,7 +92,6 @@ def create_aggregated_dataset(
     return output
 
   dataset = dataset.map(_make_dense)
-  #dataset = dataset.cache().map(_make_dense)
 
   return dataset
 
