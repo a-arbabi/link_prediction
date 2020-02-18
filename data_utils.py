@@ -281,3 +281,26 @@ def create_datasets(data_dir):
   datasets['train'] = np.concatenate([datasets['train'], is_a_induced])
 
   return datasets, entity2idx, rel2idx, sparse_anc_matrix
+
+def prepare_matrix_datasets(data_dir, omim2idx, hp2idx):
+  hypernyms_path = os.path.join(data_dir, 'hpo_hypernyms.txt')
+  children_dict = create_children_dict(hypernyms_path, hp2idx)
+  ancestry_matrix = create_weighted_ancestry_matrix(children_dict, hp2idx)
+
+  interaction_matrix = {}
+  for fold in ['train', 'valid', 'test']:
+    data_path = os.path.join(data_dir, fold + '.txt')
+    interaction_matrix[fold] = create_data_matrix(data_path, omim2idx, hp2idx)
+
+  for fold in ['train', 'valid', 'test']:
+    mat_copy = interaction_matrix[fold]
+    interaction_matrix[fold] = np.zeros(
+      [len(omim2idx), len(hp2idx)], dtype=interaction_matrix[fold].dtype)
+    interaction_matrix[fold][:mat_copy.shape[0], :mat_copy.shape[1]] = mat_copy
+
+  gt_matrix = np.sum(list(interaction_matrix.values()), axis=0)
+  gt_matrix = np.matmul(gt_matrix, ancestry_matrix)
+  binary_gt_matrix = (gt_matrix>0) * 1.0
+
+  return interaction_matrix, binary_gt_matrix
+

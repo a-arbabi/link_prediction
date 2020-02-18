@@ -22,3 +22,18 @@ def evaluate(model, config, dataset):
       'R@10': tf.reduce_mean(tf.cast(tf.less_equal(ranks, 10), tf.float32)),
       'MRR': tf.reduce_mean(1.0/tf.cast(ranks, tf.float32)),
   }
+
+def evaluate_by_matrix(ans_matrix, binary_gt_matrix, pairs_list):
+  inf = 1e+20
+  pairs_list = np.array(pairs_list)
+  called_scores = ans_matrix[tuple(pairs_list.T)]
+  ans_without_gt = ans_matrix - inf*binary_gt_matrix
+  bad_scores = ans_without_gt[pairs_list[:,0]]
+  ranks = np.sum(called_scores[:,None]<bad_scores,axis=1) + 1
+  return {
+      'R@1': tf.reduce_mean(tf.cast(tf.equal(ranks, 1), tf.float32)),
+      'R@3': tf.reduce_mean(tf.cast(tf.less_equal(ranks, 3), tf.float32)),
+      'R@10': tf.reduce_mean(tf.cast(tf.less_equal(ranks, 10), tf.float32)),
+      'MRR': tf.reduce_mean(1.0/tf.cast(ranks, tf.float32)),
+  }
+  

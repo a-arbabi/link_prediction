@@ -1,4 +1,5 @@
 import models.tucker as tucker
+from models import ease
 import numpy as np
 import tensorflow as tf
 import evaluation
@@ -60,6 +61,21 @@ def train_tucker(model, train_dataset, valid_dataset, config):
       print_results(valid_results)
   model.set_weights(best_weights)
   return best_results
+
+def run_ease_exp(dataset_path, lambda_param):
+  omim2idx = {}
+  hp2idx = {}
+  valid_path = os.path.join(dataset_path, 'valid.txt')
+  valid_pairs = data_utils.create_data_pair_list(valid_path, omim2idx, hp2idx)
+  interaction_matrix, binary_gt_matrix = data_utils.prepare_matrix_datasets(
+    dataset_path, omim2idx, hp2idx)
+
+  train_matrix = interaction_matrix['train']
+  ans, model = ease.train_model(train_matrix, lambda_param)
+  results = evaluation.evaluate_by_matrix(ans, binary_gt_matrix, valid_pairs)
+  print_results(results)
+  return model, results 
+
       
 def run_exp(exp_params, config, dataset_path):
   triplets, entity2idx, rel2idx, sp_mat = data_utils.create_datasets(dataset_path)
