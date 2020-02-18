@@ -12,10 +12,10 @@ class config:
   hidden_d2 = 0.4
   input_d = 0.4
   use_softmax = True
-  n_epochs =30
+  n_epochs = 200
   #n_epochs =150
   n_models = 1
-
+  use_core_tensor = True
 
 class TuckerModel(tf.keras.Model):
   def __init__(self, config):
@@ -53,6 +53,7 @@ class TuckerModel(tf.keras.Model):
     batch_sub_embedding = self.input_dropout(
       batch_sub_embedding,
       training=training)
+    # batch_sub_embedding.shape = [batch_size, d_entity]
     
     '''
     batch_rel_embedding = tf.nn.embedding_lookup(
@@ -61,14 +62,21 @@ class TuckerModel(tf.keras.Model):
     w_mat = tf.reshape(w_mat, [-1, config.d_entity, config.d_entity])
     w_mat = self.hidden_dropout1(w_mat, training=training)
     '''
-    ####
-    w_mat = tf.reshape(self.core_tensor, [self.config.d_entity, self.config.d_entity])
-    ####
-    
-    sub_rel_representation = tf.matmul(batch_sub_embedding, w_mat)
-    sub_rel_representation = tf.squeeze(sub_rel_representation)
-    sub_rel_representation = self.hidden_dropout2(
-      sub_rel_representation, training=training)
+    if config.use_core_tensor:
+      ####
+      w_mat = tf.reshape(self.core_tensor, [self.config.d_entity, self.config.d_entity])
+      # w_mat.shape = [d_entity, d_entity]
+      ####
+      
+      sub_rel_representation = tf.matmul(batch_sub_embedding, w_mat)
+      # sub_rel_representation.shape = [batch_size, d_entity]
+
+      
+      #sub_rel_representation = tf.squeeze(sub_rel_representation)
+      sub_rel_representation = self.hidden_dropout2(
+        sub_rel_representation, training=training)
+    else:
+      sub_rel_representation = batch_sub_embedding
     
     scores = tf.matmul(
       sub_rel_representation,
