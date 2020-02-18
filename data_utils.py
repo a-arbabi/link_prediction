@@ -37,6 +37,84 @@ def triplet_list_to_pair_dict(triplet_list, n_entities):
     sub_rel_pairs[pair].add(triplet[2])
   return sub_rel_pairs
 
+def create_data_pair_list(data_path, omim2idx, hp2idx):
+  link_ids = []
+  for link in open(data_path).readlines():
+    hp_term, rel, omim_term = link.split()[:3]
+    del(rel)
+    
+    if hp_term not in hp2idx:
+      hp2idx[hp_term] = len(hp2idx)
+    if omim_term not in omim2idx:
+      omim2idx[omim_term] = len(omim2idx)
+    
+    hp_idx = hp2idx[hp_term]
+    omim_idx = omim2idx[omim_term]
+    
+    link_ids.append((omim_idx, hp_idx))
+
+  return link_ids
+
+def create_data_matrix(data_path, omim2idx, hp2idx):
+  link_ids = create_data_pair_list(data_path, omim2idx, hp2idx)
+
+  interaction_matrix = np.zeros((len(omim2idx), len(hp2idx)), dtype=np.float32)
+  for link in link_ids:
+    interaction_matrix[link[0], link[1]] = 1.0
+    
+  return interaction_matrix
+
+def create_children_dict(data_path, term2idx):
+  children_dict = {}
+  for link in open(data_path).readlines():
+    child_term, rel, parent_term = link.split()[:3]
+    del(rel)
+    
+    if child_term not in term2idx:
+      term2idx[child_term] = len(term2idx)
+    if parent_term not in term2idx:
+      term2idx[parent_term] = len(term2idx)
+    
+    child_idx = term2idx[child_term]
+    parent_idx = term2idx[parent_term]
+
+    if parent_idx not in children_dict: 
+      children_dict[parent_idx] = set()
+    children_dict[parent_idx].add(child_idx)
+
+  return children_dict
+
+def _back_dfs(term, parents_dict, mark , ancestry_matrix):
+  if term in mark:
+    return
+  mark.add(term)
+  ancestry_matrix[term, term] = 1.0
+  if term not in parents_dict:
+    return
+  num_parents = len(parents_dict[term])
+  for parent in parents_dict[term]:
+    _back_dfs(parent, parents_dict, mark, ancestry_matrix)
+    ancestry_matrix[term] += ancestry_matrix[parent]/num_parents
+
+
+
+
+def create_weighted_ancestry_matrix(children_dict, term2idx):
+  parents_dict = {}
+  for parent in children_dict:
+    for child in children_dict[parent]:
+      if child not in parents_dict:
+        parents_dict[child] = set()
+      parents_dict[child].add(parent)
+  mark = set()
+  ancestry_matrix = np.zeros((len(term2idx), len(term2idx)), dtype=np.float32)
+  for term in term2idx:
+    _back_dfs(term2idx[term], parents_dict, mark, ancestry_matrix)
+  return ancestry_matrix
+
+
+
+
 def create_aggregated_dataset(
   triplet_list, n_entities, ground_truth_triplets=None):
   sub_rel_pairs = triplet_list_to_pair_dict(triplet_list, n_entities)
@@ -131,10 +209,14 @@ def create_datasets(data_dir):
   # dataset[:] = [child, 1, parent]
 
   children = {} 
+  parents = {}
   for link in hypernyms:
     if link[2] not in children:
       children[link[2]] = set()
     children[link[2]].add(link[0])
+    if link[0] not in parents:
+      parents[link[0]] = set()
+    parents[link[0]].add(link[2])
 
   hp_descendants = {}
 
