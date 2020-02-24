@@ -106,10 +106,46 @@ class OmimHpoData:
                 omim2hpo_dict[omim_id] = set()
             omim2hpo_dict[omim_id].add(hpo_id)
         for omim_id in omim2hpo_dict:
-            omim2hpo_dict[omim_id] = np.array(omim2hpo_dict[omim_id])
+            omim2hpo_dict[omim_id] = np.array(list(omim2hpo_dict[omim_id]))
         return omim2hpo_dict
 
     def _raw_links_to_matrix(self, raw_links):
         mat = np.zeros([len(self.omim2idx), len(self.hpo2idx)], dtype=np.float32)
         mat[raw_links[:, 0], raw_links[:, 1]] = 1.0
         return mat
+
+
+def omim2hpo_dict_to_tf_dataset(
+    omim2hpo_dict, drop_size=0.3, n_repeats=5, batch_size=None
+):
+    def gen():
+        for omim in omim2hpo_dict:
+            for rep in range(n_repeats):
+                hpo_labels = list(omim2hpo_dict[omim])
+                hpo_inputs = np.random.permutation(hpo_labels)
+                hpo_inputs = hpo_inputs[int(len(hpo_inputs) * drop_size) :]
+                data_dict = {
+                    "omim_idx": omim,
+                    "hpo_labels": hpo_labels,
+                    "hpo_inputs": hpo_inputs,
+                }
+                yield data_dict
+
+    tensor_types = {
+        "omim_idx": tf.int64,
+        "hpo_labels": tf.int64,
+        "hpo_inputs": tf.int64,
+    }
+    tensor_shapes = {
+        "omim_idx": tf.TensorShape([]),
+        "hpo_labels": tf.TensorShape([None]),
+        "hpo_inputs": tf.TensorShape([None]),
+    }
+    dataset = tf.data.Dataset.from_generator(gen, tensor_types, tensor_shapes)
+    if batch_size is not None:
+        dataset = dataset.padded_batch(
+            batch_size,
+            padded_shapes={"omim_idx": [], "hpo_labels": [None], "hpo_inputs": [None]},
+        )
+    return dataset
+
