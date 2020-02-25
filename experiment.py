@@ -1,5 +1,5 @@
 import models.tucker as tucker
-from models import ease
+from models import ease, trec
 import numpy as np
 import tensorflow as tf
 import evaluation
@@ -76,7 +76,7 @@ def train_tucker(model, train_dataset, valid_dataset, config):
 def eval_trec_model(model, valid_input_dataset, data_reader):
     model_ans = np.zeros_like(data_reader.link_matrices["train"])
     for i, batch in enumerate(valid_input_dataset):
-        x = batch["hpo_inputs"] 
+        x = batch["hpo_inputs"]
         mask = create_padding_mask(x, data_reader.special_tokens.padding)
         logits = model(x, False, mask=mask)
         model_ans[batch["omim_idx"]] = logits
@@ -101,7 +101,7 @@ def train_trec(model, data_reader, config):
         special_tokens=data_reader.special_tokens,
         batch_size=config.batch_size,
         hpo_size=len(data_reader.hpo2idx),
-        drop_sizes=[0., 0.25, 0.50, 0.75]
+        drop_sizes=[0.0, 0.25, 0.50, 0.75],
     )
     train_dataset = train_dataset.cache()
     valid_input_dataset = data_proc.create_input_dataset_for_inference(
@@ -203,6 +203,34 @@ def run_exp(exp_params, config, dataset_path):
 
 
 #  return models[-1]
+def trec_grid_search(input_path, output_path):
+    class learning_config:
+        lr = 0.0002
+        n_epochs = 200
+        batch_size = 1024
+
+    class model_config:
+        num_layers = 3
+        d_model = 256
+        num_heads = 4
+        dff = 256
+
+    data_reader = data_proc.OmimHpoData("../hpo_dataset")
+
+    with open(output_path, "w") as output_file:
+        for model_config.num_layers in [2, 4, 8]:
+            for model_config.dff in [256, 512, 1024]:
+                for model_config.num_heads in [4, 8]:
+                    model = trec.TrecModel(model_config, len(data_reader.hpo2idx))
+                    best_result = train_trec(model, data_reader, learning_config)
+                    # model, best_result = run_exp(exp_params, config, dataset_path)
+                    del model
+                    output_file.write("\tnum_layers: " + str(model_config.num_layers))
+                    output_file.write("\tdff: " + str(model_config.dff))
+                    output_file.write("\tnum_heads: " + str(model_config.num_heads))
+                    output_file.write("\t")
+                    print_results(best_result, output_file)
+                    output_file.flush()
 
 
 def grid_search_exp(exp_params, dataset_path, output_path):
@@ -226,9 +254,12 @@ def grid_search_exp(exp_params, dataset_path, output_path):
 
 
 def main():
+    """
     grid_search_exp(
         exp_params, "../hpo_dataset", "../grid_search_result_no_core_tensor.txt"
     )
+    """
+    trec_grid_search("../hpo_dataset", "../trec_grid_search.txt")
     # run_exp(exp_params, tucker.config, '../hpo_dataset')
 
 

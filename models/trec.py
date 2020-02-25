@@ -17,13 +17,13 @@ class TrecModel(tf.keras.layers.Layer):
             config.d_model,
             config.num_heads,
             config.dff,
-            hpo_size+2,
+            hpo_size + 2,
             rate=0.1,
         )
         self.decoder = tf.keras.layers.Dense(hpo_size)
 
     def call(self, x_inp, training, mask):
-#        x_inp = x['hpo_inputs']
+        #        x_inp = x['hpo_inputs']
         out = self.encoder(x_inp, training, mask)
-        out = self.decoder(out[:,0,:])
+        out = self.decoder(out[:, 0, :])
         return out
